@@ -1,0 +1,26 @@
+html,body {
+    height: 100%;
+  }
+  
+  #yellow {
+    height: 100%;
+    
+  }
+
+  .clickable {
+    cursor: pointer
+  }
+  
+  *{
+      box-sizing: border-box;
+  }
+
+.col-md-9 {
+    overflow: hidden;
+    background-color:red
+}
+
+.col-md-3 {
+   
+    background-color:green
+}

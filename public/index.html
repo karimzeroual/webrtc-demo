@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script
+  src="https://code.jquery.com/jquery-3.5.1.min.js"
+  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
+  crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css" >
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+   </head>
+<body>
+   <div id="connectedForm" class="container-fluid h-100">
+   <div class="row p-4 mt-5 justify-content-center ">
+        
+      <div class="col-8 border pl-0 pr-0  "  >
+         <input type="text" class="form-control" id="username" name="username"> 
+      </div>
+      <div class="col-2 border pl-0 pr-0  "  > 
+         <input type="button" class="btn btn-primary btn-block"  id="btnconnect"  onclick="getUsername()" value="connect"> 
+      </div>
+    </div>
+   </div>
+   <div id="main" class="container-fluid h-100">
+      <div  class="row justify-content-center h-100">
+        
+        <div class="col-3 border pl-0 pr-0 hidden-md-down" id="yellow">
+         <p 
+           
+          class="h6 bg-white p-1 m-0 border-bottom" >
+            <img 
+             src="img/user.png"
+            style="width:50px; height:50px; border-radius: 25px;"/>
+             
+           <strong id="me"></strong>
+         </p> 
+         <div class="card border-0">
+            <div class="card-header rounded-0">
+               <strong>List of connected Users</strong>
+            </div>
+            <ul class="list-group rounded-0 list-group-flush" id="users">
+                
+             </ul>
+         </div>
+       
+        </div>
+    
+        <div class="col-9 p-0 col-sm-10 col-md-10 col-lg-8 col-xl-8">
+             <div id="sendFormContainer" class="card">
+                <div class="card-header">
+                  <h4 class="p-1 m-0" id="selectedUser"></h4>
+                </div>
+                <div class="card-body">
+                  <ul class="rounded-0" id="messages">
+                
+                  </ul>
+                </div>
+                <div  class="card-footer">
+                    <form class="form-row">
+                       <div class="col">
+                        <input type="text" class="form-control" id="msg" name="msg"> 
+                       </div>
+                       <div class="col">
+                        <input type="button" class="btn btn-primary btn-block" id="btnsend" onclick="send()" value="send">
+                       </div>
+                    </form>
+               </div>
+             </div>
+        </div>
+      </div>
+    </div>
+  <!--  <p id="connectedUser"></p>
+      <input type="text" id="username" name="username">
+      <input type="button" id="btnconnect" onclick="getUsername()" value="connect"> -->
+    <script src="https://cdn.socket.io/3.1.1/socket.io.min.js" integrity="sha384-gDaozqUvc4HTgo8iZjwth73C6dDDeOJsAgpxBcMpZYztUfjHXpzrpdrHRdVp8ySO" crossorigin="anonymous"></script>
+    <script>
+
+  var peer = new Peer(); 
+  var getUserMedia 
+
+  var mainDev= document.getElementById("main");  
+  var connectedForm = document.getElementById("connectedForm")
+  var usersList = document.getElementById("users")
+  var selectedUser = document.getElementById("selectedUser")
+  var msgInput = document.getElementById("msg")
+  var connectedUser = document.getElementById("me");
+  var messagesList =document.getElementById("messages");
+  var sendFormContainer = document.getElementById("sendFormContainer");
+  sendFormContainer.style.display="none"
+   let username= undefined
+   let socket 
+   let selectedUserObj
+   let onlineUsers = []
+ // var selectedUser = document.getElementById("selectedUser")
+  //var selectedUser = document.getElementById("selectedUser")
+
+
+  const showMainDev=() => mainDev.style.display="block";
+  const hideMainDev=() => mainDev.style.display="none";
+
+  const showConnectedForm=() => connectedForm.style.display="block";
+  const hideConnectedForm=() => connectedForm.style.display="none";
+
+  hideMainDev();
+  showConnectedForm();
+
+  
+   const getUsername = ()=> {
+        let username = document.getElementById('username').value;
+        console.log('username',username)
+           socket = io({
+            query: {
+               username
+            }
+            });
+         socket.on("connect", () => {
+            console.log('connected')
+            console.log(socket.id); // x8WIv7-mJelg7on_ALbx
+            if(username){
+               document.getElementById('username').style.display='none';
+               document.getElementById('btnconnect').style.display='none';
+               connectedUser.innerHTML = username;
+               document.title = username
+            }
+   
+            socket.on("online-users-change", ()=> {
+                socket.emit('get-users','');
+            })  
+ 
+            socket.on( 'received-peerid', (payload)=> {
+               callUser(payload.peerId)
+            }) 
+
+            socket.on("getme-peerId", (payload)=> {
+                socket.emit('my-peerid',{
+                   to:payload.from,
+                   peerId:peer._id
+                });
+            })  
+           
+            socket.on('private-message', (payload)=> {
+              
+               document.title = `${username} | ${payload.msg} `
+               console.log('private-message',payload);
+               let user=onlineUsers.find(user=> user.socketId === payload.from)
+              
+               console.log('private-message',user, user.nickname);
+               selectedUser.innerHTML = user.nickname
+               console.log('private-message',selectedUser.innerHTML);
+            
+               var li = document.createElement('li');
+               li.innerHTML = `${user.nickname} : ${payload.msg}`
+               if(selectedUserObj){
+                  if(selectedUserObj.nickname!==user.nickname){
+                     selectedUserObj=user
+                     messagesList.innerHTML = ""
+                  }
+               }else{
+                  selectedUserObj=user
+                  messagesList.innerHTML = ""
+               } 
+               messagesList.appendChild(li) 
+            })   
+            
+            socket.on("online-users", (users)=> {
+               console.log('users',users)
+               onlineUsers = users
+               usersList.innerHTML = ""
+               users.forEach(u => {
+                  console.log('user',u)
+                  var li = document.createElement("li")
+                 li.className="list-group-item list-group-item-action clickable"
+                 li.innerHTML= u.nickname+' '
+                 li.onclick  = ()=>{
+                  messagesList.innerHTML=""
+                  sendFormContainer.style.display="block"
+                  selectedUserObj=u
+                  console.log('onclick',u)
+                   selectedUser.innerHTML= u.nickname
+                  }  
+
+                  var btn = document.createElement("button")
+                  btn.innerHTML= '<i class="fa fa-phone" aria-hidden="true"></i>'
+                  btn.onclick  = ()=>{
+                     console.log('peer',peer)
+                     let payload = { 
+                        from:socket.id,
+                        to:u.socketId
+                       }
+                     socket.emit('get-peer-id-request',payload)
+                  } 
+                  li.appendChild(btn);
+                  usersList.appendChild(li);
+               })
+            }) ;  
+
+            showMainDev();
+            hideConnectedForm();
+    });
+ 
+    }
+
+
+    function send(){
+        console.log('send',selectedUserObj)
+      let payload = {
+         msg: msgInput.value,
+         from:socket.id,
+         to:selectedUserObj.socketId
+      }
+      var li = document.createElement('li');
+               li.innerHTML = `me : ${payload.msg}`
+               messagesList.appendChild(li) 
+      socket.emit('sendTo',payload)
+      msgInput.value= ''
+    }
+  // answer to call from another user
+    peer.on("call", call => {
+    navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then(stream => {
+            call.answer(stream);
+            call.on("stream", showVideoCall);
+            hideMainDev();
+        })
+        .catch(err => {
+         console.log(err)
+        });
+});
+
+   function callUser(peerid){
+      console.log('user-peerid',peerid);
+               navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then(stream => {
+            let call = peer.call(peerid, stream);
+            call.on("stream", showVideoCall);
+            hideMainDev();
+        })
+        .catch(err => console.log(err));
+            
+   }
+
+    function showVideoCall(stream) {
+    let video = document.createElement("video");
+    video.srcObject = stream;
+    document.body.append(video);
+    video.play();
+}
+    </script>
+</body>
+</html>
